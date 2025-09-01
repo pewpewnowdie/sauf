@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from trackers.utils.saufQL import parse_query, ast_to_django
 
 # Create your models here.
 
@@ -131,6 +132,12 @@ class Issue(models.Model):
                 last_number = 0
             self.key = f"{self.project.key}-{last_number + 1}"
         super().save(*args, **kwargs)
+
+    @classmethod
+    def saufQL(cls, query, *args, **kwargs):
+        ast = parse_query(query)
+        qs = ast_to_django(ast, cls)
+        return qs
 
     def __str__(self):
         return self.key

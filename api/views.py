@@ -10,19 +10,9 @@ import json
 
 @api_view(['GET'])
 def issues(request, *args, **kwargs):
-    project = request.data['project']
-    if project:
-        queryset = Issue.objects.filter(project=project)
-        data = []
-        for issue in queryset:
-            data.append(IssueSerializer(issue).data)
-        return Response({'result' : data})
+    query = request.data['query']
+    if query:
+        print(Issue.saufQL(query=query))
+        return Response({'result' : 'ran fine'})
     else:
-        return Response({'error' : 'Invalid Project'}, status=400)
-    
-
-# @api_view(['GET'])
-# def issues(request, *args, **kwargs):
-#     saufql = request.data['saufql']
-#     if saufql:
-#         pass
+        return Response({'error' : 'Invalid saufQL'}, status=400)
