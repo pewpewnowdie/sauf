@@ -2,8 +2,8 @@ from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
-from trackers.models import Issue
-from trackers.serializers import IssueSerializer
+from trackers.models import Issue, Project
+from trackers.serializers import IssueSerializer, ProjectSerializer
 import json
 
 # Create your views here.
@@ -12,7 +12,15 @@ import json
 def issues(request, *args, **kwargs):
     query = request.data['query']
     if query:
-        print(Issue.saufQL(query=query))
-        return Response({'result' : 'ran fine'})
+        instance = Issue.saufQL(query=query)
+        data = IssueSerializer(instance, many=True).data
+        return Response({'type' : 'json', 'result': data})
     else:
-        return Response({'error' : 'Invalid saufQL'}, status=400)
+        return Response({'type': 'error', 'result': 'Invalid saufQL'}, status=400)
+    
+
+@api_view(['GET'])
+def projects(request, *args, **kwargs):
+    instance = Project.objects.all()
+    data = ProjectSerializer(instance, many=True).data
+    return Response({'type': 'json', 'result': data})
