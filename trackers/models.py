@@ -21,6 +21,12 @@ class Project(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
 
+    @classmethod
+    def saufQL(cls, query, *args, **kwargs):
+        ast = parse_query(query)
+        qs = ast_to_django(ast, cls)
+        return qs
+
     def __str__(self):
         return self.name
     

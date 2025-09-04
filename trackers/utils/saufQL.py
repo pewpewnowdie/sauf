@@ -2,7 +2,7 @@ from lark import Lark, Transformer, Token
 from django.db.models import Q
 
 # ---------------- Grammar ----------------
-jql_grammar = r"""
+saufql_grammar = r"""
     start: expr (order_by)?
     expr: condition (LOGIC condition)*
 
@@ -28,7 +28,7 @@ jql_grammar = r"""
     %ignore WS
 """
 
-parser = Lark(jql_grammar, parser="lalr")
+parser = Lark(saufql_grammar, parser="lalr")
 
 
 # ---------------- Transformer (AST) ----------------
@@ -82,6 +82,8 @@ class ToAST(Transformer):
 
 # ---------------- AST -> Django ORM ----------------
 def ast_to_django(ast, model_cls):
+    if not ast:
+        return None
     filters = build_filters(ast["where"])
     qs = model_cls.objects.filter(filters)
     if "order_by" in ast:
