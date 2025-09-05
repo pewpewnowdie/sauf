@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from trackers.utils.saufQL import parse_query, ast_to_django
+from django.db import transaction
 
 # Create your models here.
 
@@ -127,17 +128,25 @@ class Issue(models.Model):
     actual_end_date = models.DateField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        if not self.key:
-            last_issue = Issue.objects.filter(project=self.project).order_by('-created_at').first()
-            if last_issue and last_issue.key.startswith(f"{self.project.key}-"):
-                try:
-                    last_number = int(last_issue.key.split('-')[1])
-                except (IndexError, ValueError):
-                    last_number = 0
-            else:
-                last_number = 0
-            self.key = f"{self.project.key}-{last_number + 1}"
-        super().save(*args, **kwargs)
+      if not self.key:
+          with transaction.atomic():
+              last_issue = (
+                  Issue.objects
+                  .select_for_update()
+                  .filter(project=self.project)
+                  .order_by('-created_at')
+                  .first()
+              )
+              if last_issue and last_issue.key.startswith(f"{self.project.key}-"):
+                  try:
+                      last_number = int(last_issue.key.split('-')[1])
+                  except (IndexError, ValueError):
+                      last_number = 0
+              else:
+                  last_number = 0
+              self.key = f"{self.project.key}-{last_number + 1}"
+
+      super().save(*args, **kwargs)
 
     @classmethod
     def saufQL(cls, query, *args, **kwargs):
@@ -159,11 +168,12 @@ class Worklog(models.Model):
         return f"{self.user} - {self.issue} - {self.time_spent}"
 
     def save(self, *args, **kwargs):
-        self.issue.refresh_from_db()
-        if self.time_spent is not None:
-            if self.issue.time_spent:
-                self.issue.time_spent += self.time_spent
-            else:
-                self.issue.time_spent = self.time_spent
-            self.issue.save(update_fields=['time_spent', 'updated_at'])
-        super().save(*args, **kwargs)
+      with transaction.atomic():
+          issue = Issue.objects.select_for_update().get(pk=self.issue.pk)
+          super().save(*args, **kwargs)
+          if self.time_spent:
+              if issue.time_spent:
+                  issue.time_spent += self.time_spent
+              else:
+                  issue.time_spent = self.time_spent
+              issue.save(update_fields=['time_spent', 'updated_at'])
